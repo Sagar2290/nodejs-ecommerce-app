@@ -7,6 +7,7 @@ const session = require("express-session");
 const MongoDBStore = require("connect-mongodb-session")(session);
 const csrf = require("csurf");
 const flash = require("connect-flash");
+const multer = require("multer");
 // const expressHbs = require("express-handlebars");
 
 const errorController = require("./controllers/error");
@@ -23,6 +24,30 @@ const store = new MongoDBStore({
 
 const csrfProtection = csrf();
 
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "images");
+  },
+  filename: (req, file, cb) => {
+    cb(
+      null,
+      new Date().toISOString().replace(/:/g, "-") + "-" + file.originalname
+    );
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === "image/png" ||
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "image/jpeg"
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
+
 // below is a register for handlebars.
 // app.engine('hbs', expressHbs({layoutsDir: 'views/layouts/', defaultLayout: 'main-layout', extname: 'hbs'}))
 app.set("view engine", "ejs");
@@ -31,11 +56,15 @@ app.set("views", "views");
 const adminRoutes = require("./routes/admin");
 const shopRoutes = require("./routes/shop");
 const authRoutes = require("./routes/auth");
-const e = require("express");
 
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/images", express.static(path.join(__dirname, "images")));
 
 app.use(bodyParser.urlencoded({ extended: false }));
+
+app.use(
+  multer({ storage: fileStorage, fileFilter: fileFilter }).single("image")
+);
 
 app.use(
   session({
@@ -72,8 +101,6 @@ app.use((req, res, next) => {
     });
 });
 
-
-
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 app.use(authRoutes);
@@ -83,10 +110,12 @@ app.use("/500", errorController.get500Page);
 app.use(errorController.get404Page);
 
 app.use((error, req, res, next) => {
+  console.log(req.session);
   // res.redirect("/500");
   res.status(500).render("500", {
     path: "/500",
     pageTitle: "Page Not Found",
+    isAuthenticated: req.session.isLoggedIn,
   });
 });
 
