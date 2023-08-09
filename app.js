@@ -110,7 +110,8 @@ app.use("/500", errorController.get500Page);
 app.use(errorController.get404Page);
 
 app.use((error, req, res, next) => {
-  console.log(req.session);
+  // console.log(error);
+  // console.log(req.session);
   // res.redirect("/500");
   res.status(500).render("500", {
     path: "/500",
