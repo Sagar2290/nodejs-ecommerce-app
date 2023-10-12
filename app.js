@@ -1,5 +1,7 @@
 const path = require("path");
 
+const fs = require("fs");
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
@@ -8,13 +10,15 @@ const MongoDBStore = require("connect-mongodb-session")(session);
 const csrf = require("csurf");
 const flash = require("connect-flash");
 const multer = require("multer");
+const helmet = require("helmet");
+const compression = require("compression");
+const morgan = require("morgan");
 // const expressHbs = require("express-handlebars");
 
 const errorController = require("./controllers/error");
 const User = require("./models/user");
 
-const MONGODB_URI =
-  "mongodb+srv://sagar3715:WHJo3mTzu04oZ6WR@cluster0.jjie4rf.mongodb.net/shop";
+const MONGODB_URI = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.jjie4rf.mongodb.net/${process.env.MONGO_DEFAULT_DATABASE}`;
 
 const app = express();
 const store = new MongoDBStore({
@@ -56,6 +60,20 @@ app.set("views", "views");
 const adminRoutes = require("./routes/admin");
 const shopRoutes = require("./routes/shop");
 const authRoutes = require("./routes/auth");
+
+const accessLogStream = fs.createWriteStream(
+  path.join(__dirname, "access.log"),
+  { flags: "a" }
+);
+
+// Middleware for include secure headers
+app.use(helmet());
+
+// Middleware for compression
+// app.use(compression());
+
+// Middleware for loging
+// app.use(morgan("combined", { stream: accessLogStream }));
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/images", express.static(path.join(__dirname, "images")));
@@ -123,6 +141,6 @@ app.use((error, req, res, next) => {
 mongoose
   .connect(MONGODB_URI)
   .then((result) => {
-    app.listen(3000);
+    app.listen(process.env.PORT || 3000);
   })
   .catch((err) => console.log(err));
